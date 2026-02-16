@@ -81,8 +81,9 @@ public class Zombie
             targetVelocity = wanderDirection * Speed * 0.3f;
         }
 
-        // Smooth velocity transition
-        Velocity = Vector2.Lerp(Velocity, targetVelocity, 0.1f);
+        // Smooth velocity transition using frame-rate independent interpolation
+        float lerpFactor = 1f - MathF.Pow(0.1f, deltaTime);
+        Velocity = Vector2.Lerp(Velocity, targetVelocity, lerpFactor);
         Position += Velocity * deltaTime;
     }
 

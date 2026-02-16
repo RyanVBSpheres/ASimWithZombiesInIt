@@ -1,4 +1,5 @@
 using Microsoft.Xna.Framework;
+using System;
 
 namespace ZombieGame;
 
@@ -25,14 +26,14 @@ public class Stimulus
     public void Update(float deltaTime)
     {
         Duration -= deltaTime;
-        // Sounds decay faster than smells
+        // Sounds decay faster than smells - using frame-rate independent decay
         if (Type == StimulusType.Sound)
         {
-            Intensity *= 0.95f;
+            Intensity *= MathF.Pow(0.95f, deltaTime * 60f);
         }
         else
         {
-            Intensity *= 0.98f;
+            Intensity *= MathF.Pow(0.98f, deltaTime * 60f);
         }
     }
 
