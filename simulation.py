@@ -48,6 +48,8 @@ MAX_SOUNDS = 50   # Cap for performance
 ZOMBIE_DETECTION_RANGE = 200  # Range at which zombies detect player
 ZOMBIE_SMELL_ATTRACTION = 100  # Range at which zombies follow smells
 ZOMBIE_SOUND_ATTRACTION = 150  # Range at which zombies follow sounds
+PLAYER_SMELL_ATTRACTION_MULTIPLIER = 1.5  # Zombies prefer player smell
+MIN_SMELL_INTENSITY_FOR_ATTRACTION = 2.0  # Minimum intensity to attract zombies
 
 
 @dataclass
@@ -295,9 +297,9 @@ class Zombie(Entity):
         nearest_smell_dist = ZOMBIE_SMELL_ATTRACTION
         for smell in smells:
             # Zombies are more attracted to player smell (cyan)
-            attraction_range = ZOMBIE_SMELL_ATTRACTION * 1.5 if smell.color == CYAN else ZOMBIE_SMELL_ATTRACTION
+            attraction_range = ZOMBIE_SMELL_ATTRACTION * PLAYER_SMELL_ATTRACTION_MULTIPLIER if smell.color == CYAN else ZOMBIE_SMELL_ATTRACTION
             dist = self.position.distance_to(smell.position)
-            if dist < attraction_range and smell.intensity > 2:
+            if dist < attraction_range and smell.intensity > MIN_SMELL_INTENSITY_FOR_ATTRACTION:
                 if dist < nearest_smell_dist:
                     nearest_smell = smell
                     nearest_smell_dist = dist
