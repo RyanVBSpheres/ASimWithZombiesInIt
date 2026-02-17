@@ -3,11 +3,15 @@ Graphical zombie survival game using pygame.
 """
 import pygame
 import sys
+import math
 from simulation import ZombieSimulation
 
 
 class ZombieGame:
     """Graphical game interface for the zombie simulation."""
+    
+    # Movement constant
+    DIAGONAL_MOVEMENT_FACTOR = 1 / math.sqrt(2)  # Normalize diagonal movement
     
     def __init__(self):
         """Initialize the game."""
@@ -85,8 +89,8 @@ class ZombieGame:
         
         # Normalize diagonal movement
         if dx != 0 and dy != 0:
-            dx *= 0.707  # 1/sqrt(2)
-            dy *= 0.707
+            dx *= self.DIAGONAL_MOVEMENT_FACTOR
+            dy *= self.DIAGONAL_MOVEMENT_FACTOR
         
         # Move player if any input
         if dx != 0 or dy != 0:
