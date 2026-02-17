@@ -30,8 +30,19 @@ pip install -r requirements.txt
 
 ## Running the Simulation
 
+### Quick Start (Unix/Linux/Mac)
+```bash
+./run.sh
+```
+
+### Manual Start
 ```bash
 python simulation.py
+```
+
+Or with Python 3 explicitly:
+```bash
+python3 simulation.py
 ```
 
 ## Controls
