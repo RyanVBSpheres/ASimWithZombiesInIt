@@ -332,14 +332,14 @@ class Game:
                 self.sounds.append(creature.emit_sound())
         
         # Update and clean up smells
-        self.smells = [smell for smell in self.smells if smell.is_alive()]
         for smell in self.smells:
             smell.update()
+        self.smells = [smell for smell in self.smells if smell.is_alive()]
         
         # Update and clean up sounds
-        self.sounds = [sound for sound in self.sounds if sound.is_alive()]
         for sound in self.sounds:
             sound.update()
+        self.sounds = [sound for sound in self.sounds if sound.is_alive()]
     
     def draw(self):
         """Draw everything"""
