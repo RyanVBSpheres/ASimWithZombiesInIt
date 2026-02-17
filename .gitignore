@@ -25,4 +25,5 @@ ENV/
 .idea/
 *.log
 simulation_screenshot.png
+extended_screenshot.png
 test_simulation.py
