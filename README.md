@@ -3,9 +3,37 @@ Top Down Zombie Survival Sim
 
 ## Overview
 
-A zombie survival simulation featuring realistic predator mechanics for sound and smell tracking, along with character stats that affect gameplay.
+A zombie survival game with realistic predator mechanics for sound and smell tracking, along with character stats that affect gameplay. Control a player character to survive against zombies that hunt using sight, sound, and smell!
+
+## 🎮 How to Play
+
+### Installation
+
+1. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+### Running the Game
+
+```bash
+python game.py
+```
+
+### Controls
+- **WASD** or **Arrow Keys**: Move your character
+- **ESC**: Quit the game
+
+### Objective
+Survive as long as possible! Zombies will track you using smell (persistent, long-range) and sound (movement-based, short-range). Move strategically to avoid being caught!
 
 ## Key Features
+
+### Graphical Interface
+- **Real-time gameplay**: Smooth 30 FPS action
+- **Visual feedback**: See your player (yellow), zombies (red), smell trails (green), and sound trails (blue)
+- **Stats display**: Monitor health, agility, speed, and zombie count in real-time
+- **Camera follows player**: The view stays centered on your character
 
 ### Character Stats
 - **Health**: Character's current health (0-100)
@@ -41,12 +69,15 @@ Zombies use realistic predator behavior:
 
 ## Files
 
+- `game.py`: Graphical game interface (pygame)
 - `character.py`: Character class with health, agility, and strength stats
 - `trail_system.py`: Sound and smell trail mechanics
-- `simulation.py`: Main simulation and demo
+- `simulation.py`: Core simulation logic and text-based demo
 - `test_simulation.py`: Comprehensive unit tests
 
-## Running the Simulation
+## Running the Simulation (Text Mode)
+
+If you want to run the text-based simulation instead of the graphical game:
 
 ### Run the demo:
 ```bash
