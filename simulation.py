@@ -39,10 +39,15 @@ GRAY = (128, 128, 128)
 PLAYER_SPEED = 3.0
 ZOMBIE_SPEED = 1.5
 CREATURE_SPEED = 2.0
-SMELL_DECAY_RATE = 0.995
-SOUND_DECAY_RATE = 0.92
-SMELL_EMISSION_INTERVAL = 5  # frames
-SOUND_THRESHOLD_DISTANCE = 30  # minimum distance moved to create sound
+SMELL_DECAY_RATE = 0.98  # Faster decay for performance
+SOUND_DECAY_RATE = 0.85  # Faster decay for performance
+SMELL_EMISSION_INTERVAL = 15  # frames - less frequent
+SOUND_THRESHOLD_DISTANCE = 50  # minimum distance moved to create sound - less frequent
+MAX_SMELLS = 300  # Cap for performance
+MAX_SOUNDS = 50   # Cap for performance
+ZOMBIE_DETECTION_RANGE = 200  # Range at which zombies detect player
+ZOMBIE_SMELL_ATTRACTION = 100  # Range at which zombies follow smells
+ZOMBIE_SOUND_ATTRACTION = 150  # Range at which zombies follow sounds
 
 
 @dataclass
@@ -77,15 +82,15 @@ class Smell:
         return self.intensity > 0.1
     
     def draw(self, screen: pygame.Surface):
-        """Draw the smell as a circle with transparency based on intensity"""
+        """Draw the smell as a small ring with transparency based on intensity"""
         if self.intensity > 0.1:
-            radius = int(5 + self.intensity * 10)
-            alpha = int(min(255, self.intensity * 50))
+            radius = int(3 + self.intensity * 5)  # Smaller radius
+            alpha = int(min(150, self.intensity * 30))  # Less opaque
             color = (*self.color, alpha)
             
-            # Create a surface for the smell
+            # Create a surface for the smell - draw as ring not filled circle
             smell_surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
-            pygame.draw.circle(smell_surface, color, (radius, radius), radius)
+            pygame.draw.circle(smell_surface, color, (radius, radius), radius, 1)  # Ring with width 1
             screen.blit(smell_surface, (int(self.position.x - radius), int(self.position.y - radius)))
 
 
@@ -110,16 +115,16 @@ class Sound:
         if self.intensity > 0.5:
             # Calculate radius based on how much the sound has decayed
             decay_factor = self.intensity / self.initial_intensity
-            max_radius = 50
+            max_radius = 40  # Smaller max radius
             radius = int(max_radius * (1 - decay_factor))
             
             if radius > 0:
-                alpha = int(min(255, self.intensity * 15))
+                alpha = int(min(200, self.intensity * 12))  # Less opaque
                 color = (*YELLOW, alpha)
                 
                 # Create a surface for the sound wave
                 sound_surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
-                pygame.draw.circle(sound_surface, color, (radius, radius), radius, 2)
+                pygame.draw.circle(sound_surface, color, (radius, radius), radius, 1)  # Thinner ring
                 screen.blit(sound_surface, (int(self.position.x - radius), int(self.position.y - radius)))
 
 
@@ -135,6 +140,10 @@ class Entity:
         self.size = 10
         self.frame_count = 0
         self.total_distance_moved = 0.0
+        # Health and agility attributes
+        self.max_health = 100
+        self.health = 100
+        self.agility = 1.0  # Multiplier for speed
     
     def move(self, dx: float, dy: float):
         """Move the entity by a delta amount"""
@@ -173,8 +182,26 @@ class Entity:
         self.frame_count += 1
     
     def draw(self, screen: pygame.Surface):
-        """Draw the entity"""
-        pygame.draw.circle(screen, self.color, (int(self.position.x), int(self.position.y)), self.size)
+        """Draw the entity as a ring instead of filled circle"""
+        # Draw ring
+        pygame.draw.circle(screen, self.color, (int(self.position.x), int(self.position.y)), self.size, 2)
+        
+        # Draw health indicator (small bar above entity)
+        if self.health < self.max_health:
+            bar_width = self.size * 2
+            bar_height = 3
+            health_ratio = self.health / self.max_health
+            
+            # Background (red)
+            pygame.draw.rect(screen, RED, 
+                           (int(self.position.x - bar_width // 2), 
+                            int(self.position.y - self.size - 8),
+                            bar_width, bar_height))
+            # Foreground (green)
+            pygame.draw.rect(screen, GREEN, 
+                           (int(self.position.x - bar_width // 2), 
+                            int(self.position.y - self.size - 8),
+                            int(bar_width * health_ratio), bar_height))
 
 
 class Player(Entity):
@@ -183,6 +210,7 @@ class Player(Entity):
     def __init__(self, x: float, y: float):
         super().__init__(x, y, PLAYER_SPEED, BLUE, CYAN)
         self.size = 12
+        self.agility = 1.2  # Player is more agile
     
     def handle_input(self, keys) -> Tuple[float, float]:
         """Handle keyboard input and return movement delta"""
@@ -207,13 +235,27 @@ class Player(Entity):
 
 
 class Zombie(Entity):
-    """Zombie entity that wanders around"""
+    """Zombie entity that wanders around and reacts to stimuli"""
     
     def __init__(self, x: float, y: float):
         super().__init__(x, y, ZOMBIE_SPEED, RED, PURPLE)
         self.direction_change_timer = 0
         self.current_direction = random.uniform(0, 2 * math.pi)
         self.size = 10
+        self.agility = 0.8  # Zombies are less agile
+    
+    def seek_target(self, target_pos: Position) -> Tuple[float, float]:
+        """Move towards a target position"""
+        dx = target_pos.x - self.position.x
+        dy = target_pos.y - self.position.y
+        dist = math.sqrt(dx * dx + dy * dy)
+        
+        if dist > 0:
+            # Normalize and scale by speed
+            dx = (dx / dist) * self.speed * self.agility
+            dy = (dy / dist) * self.speed * self.agility
+        
+        return dx, dy
     
     def wander(self) -> Tuple[float, float]:
         """Generate wandering movement"""
@@ -224,10 +266,47 @@ class Zombie(Entity):
             self.direction_change_timer = random.randint(60, 180)
             self.current_direction = random.uniform(0, 2 * math.pi)
         
-        dx = math.cos(self.current_direction) * self.speed
-        dy = math.sin(self.current_direction) * self.speed
+        dx = math.cos(self.current_direction) * self.speed * self.agility
+        dy = math.sin(self.current_direction) * self.speed * self.agility
         
         return dx, dy
+    
+    def update_behavior(self, player_pos: Position, smells: List[Smell], sounds: List[Sound]) -> Tuple[float, float]:
+        """Update zombie behavior based on stimuli"""
+        # Priority 1: Chase player if in detection range
+        player_dist = self.position.distance_to(player_pos)
+        if player_dist < ZOMBIE_DETECTION_RANGE:
+            return self.seek_target(player_pos)
+        
+        # Priority 2: Follow nearby sounds
+        nearest_sound = None
+        nearest_sound_dist = ZOMBIE_SOUND_ATTRACTION
+        for sound in sounds:
+            dist = self.position.distance_to(sound.position)
+            if dist < nearest_sound_dist:
+                nearest_sound = sound
+                nearest_sound_dist = dist
+        
+        if nearest_sound:
+            return self.seek_target(nearest_sound.position)
+        
+        # Priority 3: Follow nearby smells (prefer player smell - cyan)
+        nearest_smell = None
+        nearest_smell_dist = ZOMBIE_SMELL_ATTRACTION
+        for smell in smells:
+            # Zombies are more attracted to player smell (cyan)
+            attraction_range = ZOMBIE_SMELL_ATTRACTION * 1.5 if smell.color == CYAN else ZOMBIE_SMELL_ATTRACTION
+            dist = self.position.distance_to(smell.position)
+            if dist < attraction_range and smell.intensity > 2:
+                if dist < nearest_smell_dist:
+                    nearest_smell = smell
+                    nearest_smell_dist = dist
+        
+        if nearest_smell:
+            return self.seek_target(nearest_smell.position)
+        
+        # Default: Wander
+        return self.wander()
 
 
 class Creature(Entity):
@@ -238,6 +317,7 @@ class Creature(Entity):
         self.direction_change_timer = 0
         self.current_direction = random.uniform(0, 2 * math.pi)
         self.size = 8
+        self.agility = 1.3  # Creatures are more agile
     
     def wander(self) -> Tuple[float, float]:
         """Generate wandering movement"""
@@ -248,8 +328,8 @@ class Creature(Entity):
             self.direction_change_timer = random.randint(30, 120)
             self.current_direction = random.uniform(0, 2 * math.pi)
         
-        dx = math.cos(self.current_direction) * self.speed
-        dy = math.sin(self.current_direction) * self.speed
+        dx = math.cos(self.current_direction) * self.speed * self.agility
+        dy = math.sin(self.current_direction) * self.speed * self.agility
         
         return dx, dy
 
@@ -301,22 +381,22 @@ class Game:
         self.player.move(dx, dy)
         self.player.update()
         
-        # Emit player smell and sound
-        if self.player.should_emit_smell():
+        # Emit player smell and sound (with cap check)
+        if self.player.should_emit_smell() and len(self.smells) < MAX_SMELLS:
             self.smells.append(self.player.emit_smell())
-        if self.player.should_emit_sound():
+        if self.player.should_emit_sound() and len(self.sounds) < MAX_SOUNDS:
             self.sounds.append(self.player.emit_sound())
         
-        # Update zombies
+        # Update zombies with stimulus-based behavior
         for zombie in self.zombies:
-            dx, dy = zombie.wander()
+            dx, dy = zombie.update_behavior(self.player.position, self.smells, self.sounds)
             zombie.move(dx, dy)
             zombie.update()
             
-            # Emit zombie smell and sound
-            if zombie.should_emit_smell():
+            # Emit zombie smell and sound (with cap check)
+            if zombie.should_emit_smell() and len(self.smells) < MAX_SMELLS:
                 self.smells.append(zombie.emit_smell())
-            if zombie.should_emit_sound():
+            if zombie.should_emit_sound() and len(self.sounds) < MAX_SOUNDS:
                 self.sounds.append(zombie.emit_sound())
         
         # Update creatures
@@ -325,10 +405,10 @@ class Game:
             creature.move(dx, dy)
             creature.update()
             
-            # Emit creature smell and sound
-            if creature.should_emit_smell():
+            # Emit creature smell and sound (with cap check)
+            if creature.should_emit_smell() and len(self.smells) < MAX_SMELLS:
                 self.smells.append(creature.emit_smell())
-            if creature.should_emit_sound():
+            if creature.should_emit_sound() and len(self.sounds) < MAX_SOUNDS:
                 self.sounds.append(creature.emit_sound())
         
         # Update and clean up smells
@@ -336,10 +416,18 @@ class Game:
             smell.update()
         self.smells = [smell for smell in self.smells if smell.is_alive()]
         
+        # Enforce cap on smells (remove oldest if over cap)
+        if len(self.smells) > MAX_SMELLS:
+            self.smells = self.smells[-MAX_SMELLS:]
+        
         # Update and clean up sounds
         for sound in self.sounds:
             sound.update()
         self.sounds = [sound for sound in self.sounds if sound.is_alive()]
+        
+        # Enforce cap on sounds (remove oldest if over cap)
+        if len(self.sounds) > MAX_SOUNDS:
+            self.sounds = self.sounds[-MAX_SOUNDS:]
     
     def draw(self):
         """Draw everything"""
@@ -365,9 +453,17 @@ class Game:
         
         # Draw UI
         font = pygame.font.Font(None, 24)
-        text = font.render(f"Zombies: {len(self.zombies)} | Creatures: {len(self.creatures)} | Smells: {len(self.smells)} | Sounds: {len(self.sounds)}", True, WHITE)
+        
+        # FPS and entity counts
+        fps = int(self.clock.get_fps())
+        text = font.render(f"FPS: {fps} | Zombies: {len(self.zombies)} | Creatures: {len(self.creatures)} | Smells: {len(self.smells)}/{MAX_SMELLS} | Sounds: {len(self.sounds)}/{MAX_SOUNDS}", True, WHITE)
         self.screen.blit(text, (10, 10))
         
+        # Player stats
+        player_stats = font.render(f"Player - Health: {int(self.player.health)} | Agility: {self.player.agility:.1f}", True, CYAN)
+        self.screen.blit(player_stats, (10, 35))
+        
+        # Controls
         controls_text = font.render("Controls: Arrow Keys or WASD to move | ESC to quit", True, WHITE)
         self.screen.blit(controls_text, (10, WINDOW_HEIGHT - 30))
         
