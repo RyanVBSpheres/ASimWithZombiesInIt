@@ -26,4 +26,7 @@ ENV/
 *.log
 simulation_screenshot.png
 extended_screenshot.png
+improved_screenshot.png
+zombie_reactions_test.png
 test_simulation.py
+test_zombie_reactions.py
