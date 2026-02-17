@@ -96,7 +96,7 @@ intensity = 0.05             (if stationary - almost non-existent)
 ## Game Mechanics
 
 1. **Player Movement**: Creates sound (when moving) and smell trails
-2. **Trail Persistence**: Smell trails last ~10x longer than sound trails
+2. **Trail Persistence**: Smell trails last ~5x longer than sound trails
 3. **Zombie AI**: Zombies follow strongest trail (smell > sound priority)
 4. **Combat**: Damage reduces health, which proportionally reduces agility
 5. **Speed Penalty**: Lower agility = slower movement speed

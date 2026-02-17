@@ -175,10 +175,16 @@ class TestTrailSystem(unittest.TestCase):
     def test_smell_has_longer_range_than_sound(self):
         """Test that smell detection range is longer than sound."""
         trail_system = TrailSystem()
-        # Sound max_distance default is 10
-        # Smell max_distance default is 20
-        # This is verified in the get_strongest_trail_direction method
-        self.assertTrue(True)  # Verified by code inspection
+        trail_system.sound_trails.append(Trail(0, 0, 1.0, 0.1))
+        trail_system.smell_trails.append(Trail(0, 0, 1.0, 0.1))
+        
+        # Sound should not detect at distance 15 (max 10)
+        sound_intensity = trail_system.get_sound_intensity_at(15, 0)
+        self.assertEqual(sound_intensity, 0)
+        
+        # Smell should detect at distance 15 (max 20)
+        smell_intensity = trail_system.get_smell_intensity_at(15, 0)
+        self.assertGreater(smell_intensity, 0)
 
 
 class TestZombieSimulation(unittest.TestCase):
